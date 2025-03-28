@@ -42,16 +42,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      console.log("Attempting to sign in with Google...");
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Sign in successful:", result.user.displayName);
       toast({
         title: "Success!",
-        description: "You have successfully logged in.",
+        description: `Welcome ${result.user.displayName || ""}! You have successfully logged in.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google:", error);
+      let errorMessage = "Please try again later.";
+      
+      // Handle specific Firebase auth errors
+      if (error.code === 'auth/configuration-not-found') {
+        errorMessage = "Firebase authentication is not configured properly for this domain.";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Sign-in popup was blocked. Please allow popups for this site.";
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Sign-in was canceled. Please try again.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your connection.";
+      }
+      
       toast({
         title: "Error signing in",
-        description: "Please try again later.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
