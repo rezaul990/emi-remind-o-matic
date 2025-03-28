@@ -102,7 +102,15 @@ export const getFilteredReminders = async (filter: string): Promise<PaymentRemin
     const querySnapshot = await getDocs(q);
     
     return querySnapshot.docs.map(doc => {
-      const data = doc.data();
+      const data = doc.data() as {
+        accountNumber: string;
+        promisedDate: Timestamp;
+        status: PaymentStatus;
+        createdAt: Timestamp;
+        updatedAt: Timestamp;
+        createdBy: string;
+      };
+      
       return {
         id: doc.id,
         accountNumber: data.accountNumber,
