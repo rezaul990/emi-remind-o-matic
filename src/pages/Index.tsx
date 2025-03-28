@@ -18,16 +18,17 @@ import {
   AlertTriangle,
   LogOut,
   ArrowDownUp,
+  Shield,
 } from "lucide-react";
 import ReminderTable from "@/components/ReminderTable";
 import AddReminderModal from "@/components/AddReminderModal";
 import { getFilteredReminders } from "@/services/reminderService";
 import { PaymentFilter } from "@/types";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const Index = () => {
-  const { currentUser, logout, loading } = useAuth();
+  const { currentUser, logout, loading, isAdmin } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<PaymentFilter>("upcoming");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -85,6 +86,13 @@ const Index = () => {
                   <Button variant="ghost" onClick={handleAddReminder} className="justify-start">
                     <Plus className="h-4 w-4 mr-2" /> Add Reminder
                   </Button>
+                  {isAdmin && (
+                    <Link to="/admin">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Shield className="h-4 w-4 mr-2" /> Admin
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" onClick={() => logout()} className="justify-start text-red-600">
                     <LogOut className="h-4 w-4 mr-2" /> Logout
                   </Button>
@@ -98,6 +106,13 @@ const Index = () => {
             <Button onClick={handleAddReminder}>
               <Plus className="h-4 w-4 mr-2" /> Add Reminder
             </Button>
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="outline">
+                  <Shield className="h-4 w-4 mr-2" /> Admin
+                </Button>
+              </Link>
+            )}
             <Button variant="outline" onClick={() => logout()}>
               <LogOut className="h-4 w-4 mr-2" /> Logout
             </Button>

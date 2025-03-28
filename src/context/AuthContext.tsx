@@ -7,12 +7,20 @@ import {
   signOut as authSignOut, 
   User
 } from "firebase/auth";
-import { auth, googleProvider } from "../lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from "../lib/firebase";
 import { useToast } from "../hooks/use-toast";
+
+interface UserData {
+  isAdmin: boolean;
+  email: string;
+}
 
 interface AuthContextType {
   currentUser: User | null;
+  userData: UserData | null;
   loading: boolean;
+  isAdmin: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -29,12 +37,47 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
+  // Function to fetch or create user data
+  const fetchOrCreateUserData = async (user: User) => {
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        // User exists in Firestore, get their data
+        const userData = userSnap.data() as UserData;
+        setUserData(userData);
+        return userData;
+      } else {
+        // Create new user in Firestore
+        const newUserData: UserData = {
+          isAdmin: false, // Default to non-admin
+          email: user.email || '',
+        };
+        await setDoc(userRef, newUserData);
+        setUserData(newUserData);
+        return newUserData;
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      return null;
+    }
+  };
+  
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      
+      if (user) {
+        await fetchOrCreateUserData(user);
+      } else {
+        setUserData(null);
+      }
+      
       setLoading(false);
     });
     return unsubscribe;
@@ -45,6 +88,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("Attempting to sign in with Google...");
       const result = await signInWithPopup(auth, googleProvider);
       console.log("Sign in successful:", result.user.displayName);
+      
+      // Fetch or create user data after sign in
+      await fetchOrCreateUserData(result.user);
+      
       toast({
         title: "Success!",
         description: `Welcome ${result.user.displayName || ""}! You have successfully logged in.`,
@@ -75,6 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await authSignOut(auth);
+      setUserData(null);
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -91,7 +139,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const value = {
     currentUser,
+    userData,
     loading,
+    isAdmin: userData?.isAdmin || false,
     signInWithGoogle,
     logout,
   };
